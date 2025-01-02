@@ -11,13 +11,14 @@ import { parseBoolearn } from '@/src/shared/utils/parse-boolearn.util'
 import { CoreModule } from './core/core.module'
 import { RedisService } from './core/redis/redis.service'
 
+
 async function bootstrap() {
 	const app = await NestFactory.create(CoreModule)
 
 	const config = app.get(ConfigService)
 	const redis = app.get(RedisService)
 
-	app.use(cookieParser(config.getOrThrow<string>('COOKIE_SECRET')))
+	app.use(cookieParser(config.getOrThrow<string>('COOKIES_SECRET')))
 
 	app.useGlobalPipes(
 		new ValidationPipe({
@@ -45,7 +46,7 @@ async function bootstrap() {
 			store: new RedisStore({
 				client: redis,
 				prefix: config.getOrThrow<string>('SESSION_FOLDER')
-			}),
+			})
 		})
 	)
 
