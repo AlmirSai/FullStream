@@ -3,19 +3,13 @@ import { hash } from 'argon2'
 
 import { PrismaService } from '@/src/core/prisma/prisma.service'
 
-import { CreateUserInout } from './inputs/create-user.input'
+import { CreateUserInput } from './inputs/create-user.input'
 
 @Injectable()
 export class AccountService {
 	public constructor(private readonly prismaService: PrismaService) {}
 
-	public async findAll() {
-		const users = await this.prismaService.user.findMany()
-
-		return users
-	}
-
-	public async create(input: CreateUserInout) {
+	public async create(input: CreateUserInput) {
 		const { username, email, password } = input
 
 		const isUsernameExists = await this.prismaService.user.findUnique({
@@ -37,7 +31,7 @@ export class AccountService {
 		if (isEmailExists) {
 			throw new ConflictException('This email is already taken.')
 		}
-
+		// Variable `user` is not used, but it's required to create a user.
 		const user = await this.prismaService.user.create({
 			data: {
 				username,
@@ -47,6 +41,6 @@ export class AccountService {
 			}
 		})
 
-		return user
+		return true
 	}
 }
