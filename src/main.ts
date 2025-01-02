@@ -11,7 +11,6 @@ import { parseBoolearn } from '@/src/shared/utils/parse-boolearn.util'
 import { CoreModule } from './core/core.module'
 import { RedisService } from './core/redis/redis.service'
 
-
 async function bootstrap() {
 	const app = await NestFactory.create(CoreModule)
 

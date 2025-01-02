@@ -13,7 +13,5 @@ export function parseBoolearn(value: string): boolean {
 		}
 	}
 
-	throw new Error(
-		'Не удалось преобразовать значение "&(value)" в логическое значение'
-	)
+	throw new Error('Failed to convert the value "&(value)" to a boolean.')
 }
