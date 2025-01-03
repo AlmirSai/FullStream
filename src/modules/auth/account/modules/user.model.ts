@@ -1,11 +1,13 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql'
 
+import type { User } from '@/prisma/generated'
+
 /**
  * UserModel represents the structure of a user object in the GraphQL schema.
  * This object type is used to define how user data is exposed through GraphQL queries.
  */
 @ObjectType()
-export class UserModel {
+export class UserModel implements User {
 	/**
 	 * The `id` field is the unique identifier for the user.
 	 * It is of type `ID`, which represents a unique value for the user in the GraphQL schema.

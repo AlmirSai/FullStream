@@ -1,5 +1,6 @@
 import type { Request } from 'express'
 import { lookup } from 'geoip-lite'
+import * as countries from 'i18n-iso-countries'
 
 import type { SessionMetadata } from '../types/session-metadata.types'
 
@@ -52,7 +53,7 @@ export function getSessionMetadata(
 
 	return {
 		location: {
-			country: location.country || 'Unknown',
+			country: countries.getName(location.country, 'en') || 'Unknown',
 			city: location.city || 'Unknown',
 			latitude: location.ll ? location.ll[0] : 0,
 			longitude: location.ll ? location.ll[1] : 0
