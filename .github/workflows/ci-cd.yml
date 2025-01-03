@@ -1,0 +1,174 @@
+name: CI/CD Pipeline
+
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+        branches:
+            - main
+    release:
+        types: [created]
+
+jobs:
+    # Linting and Code Quality
+    lint:
+        name: Linting Code
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: 22
+
+            - name: Install dependencies
+              run: yarn install
+
+            - name: Run Linting
+              run: yarn lint
+
+    # Test job for Unit and Integration Tests
+    test:
+        name: Run Tests
+        runs-on: ubuntu-latest
+        needs: lint
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: 22
+
+            - name: Install dependencies
+              run: yarn install
+
+            - name: Run Tests
+              run: yarn test
+
+    # Docker Image Build and Push
+    build:
+        name: Build Docker Image
+        runs-on: ubuntu-latest
+        needs: [lint, test]
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Log in to Docker Hub
+              uses: docker/login-action@v3
+              with:
+                  username: ${{ secrets.DOCKER_USERNAME }}
+                  password: ${{ secrets.DOCKER_PASSWORD }}
+
+            - name: Build Docker Image
+              run: |
+                  docker-compose -f docker-compose.yml build
+
+            - name: Tag and Push Docker Image
+              run: |
+                  IMAGE_TAG=$(echo $GITHUB_SHA | cut -c1-7)
+                  docker tag your-app:latest your-dockerhub-username/your-app:$IMAGE_TAG
+                  docker push your-dockerhub-username/your-app:$IMAGE_TAG
+                  echo "Pushed image with tag: $IMAGE_TAG"
+
+    # Staging Deployment
+    deploy_staging:
+        name: Deploy to Staging
+        runs-on: ubuntu-latest
+        needs: build
+        environment:
+            name: staging
+            url: ${{ steps.deploy_staging.outputs.staging_url }}
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Create .env file for Docker Compose
+              run: |
+                  echo "POSTGRESQL_URI=${{ secrets.POSTGRESQL_URI }}" >> .env
+                  echo "REDIS_URI=${{ secrets.REDIS_URI }}" >> .env
+                  echo "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}" >> .env
+                  echo "APP_PORT=${{ secrets.APP_PORT }}" >> .env
+                  echo "STAGING=true" >> .env
+
+            - name: Deploy to Staging using Docker Compose
+              run: |
+                  docker-compose -f docker-compose.yml up -d
+                  docker-compose -f docker-compose.yml exec -T backend /bin/bash -c "yarn run migrate" # Run migrations on staging
+
+            - name: Health Check
+              run: |
+                  sleep 10
+                  curl -f http://localhost:3000/health || exit 1
+
+            - name: Notify Success
+              if: success()
+              run: |
+                  curl -X POST -H "Content-Type: application/json" -d '{"text": "Staging Deployment Successful"}' ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    # Production Deployment (Manual Trigger)
+    deploy_production:
+        name: Deploy to Production
+        runs-on: ubuntu-latest
+        needs: deploy_staging
+        environment:
+            name: production
+            url: ${{ steps.deploy_production.outputs.prod_url }}
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Create .env file for Docker Compose
+              run: |
+                  echo "POSTGRESQL_URI=${{ secrets.POSTGRESQL_URI }}" >> .env
+                  echo "REDIS_URI=${{ secrets.REDIS_URI }}" >> .env
+                  echo "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}" >> .env
+                  echo "APP_PORT=${{ secrets.APP_PORT }}" >> .env
+                  echo "STAGING=false" >> .env
+
+            - name: Deploy to Production using Docker Compose
+              run: |
+                  docker-compose -f docker-compose.yml up -d
+                  docker-compose -f docker-compose.yml exec -T backend /bin/bash -c "yarn run migrate" # Run migrations on production
+
+            - name: Health Check
+              run: |
+                  sleep 10
+                  curl -f http://localhost:3000/health || exit 1
+
+            - name: Notify Success
+              if: success()
+              run: |
+                  curl -X POST -H "Content-Type: application/json" -d '{"text": "Production Deployment Successful"}' ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    # Rollback Strategy
+    rollback:
+        name: Rollback Deployment
+        runs-on: ubuntu-latest
+        if: failure() # Runs only if deployment fails
+        needs: deploy_production
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Rollback Deployment
+              run: |
+                  echo "Rolling back deployment..."
+                  docker-compose -f docker-compose.yml down
+                  docker-compose -f docker-compose.yml up -d --no-deps --build
