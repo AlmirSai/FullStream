@@ -17,6 +17,23 @@ export class AccountService {
 	public constructor(private readonly prismaService: PrismaService) {}
 
 	/**
+	 * The `me` method fetches the user profile by the provided user ID.
+	 * It interacts with Prisma to retrieve the user's information.
+	 *
+	 * @param id - The user ID used to find the specific user.
+	 * @returns The user object if found in the database.
+	 */
+	public async me(id: string) {
+		// Fetch the user from the database by ID
+		const user = await this.prismaService.user.findUnique({
+			where: { id }
+		})
+
+		// Return the found user (or null if not found)
+		return user
+	}
+
+	/**
 	 * The `create` method is responsible for creating a new user account.
 	 * It checks if the username and email are already taken, hashes the password,
 	 * and creates the user in the database.
@@ -35,6 +52,7 @@ export class AccountService {
 			}
 		})
 
+		// If the username is taken, throw a ConflictException
 		if (isUsernameExists) {
 			throw new ConflictException('This username is already taken.')
 		}
@@ -46,21 +64,27 @@ export class AccountService {
 			}
 		})
 
+		// If the email is taken, throw a ConflictException
 		if (isEmailExists) {
 			throw new ConflictException('This email is already taken.')
 		}
 
+		// Hash the password before storing it in the database
+		// Use the argon2 hash function for secure password storage
+		const hashedPassword = await hash(password)
+
 		// Create the new user in the database after validation
-		// Note: `user` variable is not used directly but required for the user creation process
+		// The displayName is set to the username by default
 		await this.prismaService.user.create({
 			data: {
 				username,
 				email,
-				password: await hash(password), // Hash the password before storing
-				displayName: username // Default display name is the same as the username
+				password: hashedPassword, // Store the hashed password
+				displayName: username // Default display name is the username
 			}
 		})
 
-		return true // Return true indicating user creation was successful
+		// Return true indicating user creation was successful
+		return true
 	}
 }
