@@ -9,6 +9,7 @@ import { verify } from 'argon2'
 import type { Request } from 'express'
 
 import { PrismaService } from '@/src/core/prisma/prisma.service'
+import { getSessionMetadata } from '@/src/shared/utils/session-metadata.util'
 
 import { LoginInput } from './inputs/login.input'
 
@@ -19,7 +20,7 @@ import { LoginInput } from './inputs/login.input'
 @Injectable()
 export class SessionService {
 	/**
-	 * Constructor injects `PrismaService` to interact with the database and `ConfigService` to manage configurations.
+	 * Constructor injects PrismaService to interact with the database and ConfigService to manage configurations.
 	 */
 	public constructor(
 		private readonly PrismaService: PrismaService,
@@ -27,16 +28,21 @@ export class SessionService {
 	) {}
 
 	/**
-	 * The `login` method is responsible for authenticating the user.
+	 * The login method is responsible for authenticating the user.
 	 * It checks whether the provided username/email and password are correct, and if so, creates a session for the user.
 	 *
 	 * @param req - The Express request object, which contains the session.
 	 * @param input - The login credentials (login and password).
-	 * @returns The authenticated `user` object if successful, otherwise throws an exception.
+	 * @returns The authenticated user object if successful, otherwise throws an exception.
 	 * @throws NotFoundException if the user is not found.
 	 * @throws UnauthorizedException if the password is incorrect.
 	 */
-	public async login(req: Request, input: LoginInput) {
+	public async login(
+		req: Request,
+		input: LoginInput,
+		config: ConfigService,
+		userAgent: string
+	) {
 		const { login, password } = input
 
 		// Check if the user exists by searching for matching username or email
@@ -62,10 +68,13 @@ export class SessionService {
 			throw new UnauthorizedException('Invalid password')
 		}
 
+		const metadata = getSessionMetadata(req, userAgent)
+
 		// Set up the session for the authenticated user
 		return new Promise((resolve, reject) => {
 			req.session.createdAt = new Date()
 			req.session.userId = user.id
+			req.session.metadaat = metadata
 
 			// Save the session
 			req.session.save(err => {
@@ -83,10 +92,10 @@ export class SessionService {
 	}
 
 	/**
-	 * The `logout` method destroys the user's session and clears the session cookie.
+	 * The logout method destroys the user's session and clears the session cookie.
 	 *
 	 * @param req - The Express request object containing the session.
-	 * @returns `true` if the session is successfully destroyed, otherwise throws an exception.
+	 * @returns true if the session is successfully destroyed, otherwise throws an exception.
 	 * @throws InternalServerErrorException if there is an error during logout.
 	 */
 	public async logout(req: Request) {

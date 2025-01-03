@@ -5464,7 +5464,7 @@ human-signals@^2.1.0:
   resolved "https://registry.yarnpkg.com/human-signals/-/human-signals-2.1.0.tgz#dc91fcba42e4d06e4abaed33b3e7a3c02f514ea0"
   integrity sha512-B4FFZ6q/T2jhhksgkbEW3HBvWIfDW85snkQgawt07S7J5QXTk6BkNV+0yAeZrM5QpMAdYlocGoljn0sJ/WQkFw==
 
-i18n-iso-countries@^7.12.0:
+i18n-iso-countries@^7.13.0:
   version "7.13.0"
   resolved "https://registry.yarnpkg.com/i18n-iso-countries/-/i18n-iso-countries-7.13.0.tgz#8c71e0ffa0748ee26ad0fa219c815b6f3a5bc404"
   integrity sha512-pVh4CjdgAHZswI98hzG+1BItQlsQfR+yGDsjDISoWIV/jHDAvCmSyZ5vj2YWwAjfVZ8/BhBDqWcFvuGOyHe4vg==
