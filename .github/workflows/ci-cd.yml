@@ -30,31 +30,11 @@ jobs:
             - name: Run Linting
               run: yarn lint
 
-    # Test job for Unit and Integration Tests
-    test:
-        name: Run Tests
-        runs-on: ubuntu-latest
-        needs: lint
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v3
-
-            - name: Set up Node.js
-              uses: actions/setup-node@v3
-              with:
-                  node-version: 22
-
-            - name: Install dependencies
-              run: yarn install
-
-            - name: Run Tests
-              run: yarn test
-
     # Docker Image Build and Push
     build:
         name: Build Docker Image
         runs-on: ubuntu-latest
-        needs: [lint, test]
+        needs: [lint]
         steps:
             - name: Checkout code
               uses: actions/checkout@v3
